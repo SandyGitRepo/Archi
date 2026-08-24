@@ -216,7 +216,7 @@ export default function Archi() {
           </div>
         </div>
         <div className="archi-topbar-right">
-          <span className="archi-topbar-tag">CLAUDE SONNET 4.6</span>
+          <span className="archi-topbar-tag">CLAUDE SONNET 5</span>
         </div>
       </div>
 

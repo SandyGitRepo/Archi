@@ -11,10 +11,9 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, BeforeValidator
 from typing import List, Optional, Annotated
 from bson import ObjectId
-import uuid
 from datetime import datetime, timezone
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
+import anthropic
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -23,9 +22,8 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
-MODEL_PROVIDER = "anthropic"
-MODEL_NAME = "claude-sonnet-4-6"
+MODEL_NAME = "claude-sonnet-5"
+anthropic_client = anthropic.AsyncAnthropic()
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -124,9 +122,14 @@ async def extract_memory(session_id: str, user_msg: str, assistant_msg: str):
             "Return STRICT JSON: {\"facts\": [\"...\"]}. Each fact a short third-person sentence about the user. "
             "Do NOT repeat facts already known. If nothing new, return {\"facts\": []}."
         )
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"mem-{uuid.uuid4()}", system_message=sys).with_model(MODEL_PROVIDER, MODEL_NAME)
         prompt = f"Known facts:\n{existing_block}\n\nNew exchange:\nUser: {user_msg}\nAssistant: {assistant_msg}\n\nReturn JSON only."
-        raw = await chat.send_message(UserMessage(text=prompt))
+        response = await anthropic_client.messages.create(
+            model=MODEL_NAME,
+            max_tokens=512,
+            system=sys,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = next((b.text for b in response.content if b.type == "text"), "")
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.strip("`")
@@ -179,9 +182,6 @@ async def init_session(req: InitRequest):
 
 @api_router.post("/chat")
 async def chat(req: ChatRequest):
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(status_code=500, detail="LLM key not configured")
-
     message = req.message.strip()
     if not message:
         raise HTTPException(status_code=422, detail="message cannot be empty")
@@ -197,22 +197,19 @@ async def chat(req: ChatRequest):
     prior = transcript[:-1] if transcript else []
     system_prompt = build_system_prompt(memory_facts, prior)
 
-    chat_client = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"turn-{uuid.uuid4()}",
-        system_message=system_prompt,
-    ).with_model(MODEL_PROVIDER, MODEL_NAME)
-
     async def event_generator():
         full = ""
         try:
-            async for event in chat_client.stream_message(UserMessage(text=message)):
-                if isinstance(event, TextDelta):
-                    full += event.content
-                    yield f"data: {json.dumps({'delta': event.content})}\n\n"
-                elif isinstance(event, StreamDone):
-                    break
-        except Exception as e:
+            async with anthropic_client.messages.stream(
+                model=MODEL_NAME,
+                max_tokens=1024,
+                system=system_prompt,
+                messages=[{"role": "user", "content": message}],
+            ) as stream:
+                async for text in stream.text_stream:
+                    full += text
+                    yield f"data: {json.dumps({'delta': text})}\n\n"
+        except anthropic.APIError as e:
             logging.error(f"chat stream error: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
         # persist assistant message

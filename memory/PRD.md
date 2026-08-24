@@ -4,14 +4,14 @@
 Adapt github.com/jaredrhod/fullstack-agent (a local Claude Code stack giving an AI "memory, voice, face, and hands") into a web app. Name the assistant **Archi**, give it a **female voice**, and have it **call the user "daddy"**.
 
 ## User Choices
-- LLM brain: **Claude Sonnet 4.6** (via Emergent LLM key)
+- LLM brain: **Claude Sonnet 5** (direct Anthropic API)
 - Voice: **Browser Web Speech API** (female TTS + speech-to-text listening)
 - Face: **Switchable** glowing orb + living circuit board
 - **Persistent memory** across sessions: yes
 - Both **voice + typed chat**
 
 ## Architecture
-- **Backend**: FastAPI + MongoDB (motor). Streaming chat via `emergentintegrations` LlmChat (anthropic/claude-sonnet-4-6) over SSE. Async background memory extraction.
+- **Backend**: FastAPI + MongoDB (motor). Streaming chat via the official `anthropic` Python SDK (claude-sonnet-5) over SSE. Async background memory extraction.
 - **Frontend**: React 19 + framer-motion + lucide-react. CSS/SVG-driven sci-fi HUD visualizer (no heavy 3D deps). Web Speech API hook for voice.
 - Session id auto-generated per browser (localStorage), enabling persistent memory.
 
