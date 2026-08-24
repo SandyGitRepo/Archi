@@ -9,13 +9,13 @@ import { useSpeech } from "../hooks/useSpeech";
 import { initSession, streamChat, getMemory, addMemory, deleteMemory, clearMessages } from "../lib/api";
 
 const SESSION_KEY = "archi_session_id";
+// Archi is a single-user personal assistant ("daddy"), so we use one stable
+// identity for the vault. This makes memory + history persist across every
+// session, browser, and device — never erased between visits.
+const FIXED_SESSION_ID = "archi-daddy-main";
 function getSessionId() {
-  let id = localStorage.getItem(SESSION_KEY);
-  if (!id) {
-    id = `daddy-${Math.random().toString(36).slice(2)}-${Date.now()}`;
-    localStorage.setItem(SESSION_KEY, id);
-  }
-  return id;
+  localStorage.setItem(SESSION_KEY, FIXED_SESSION_ID);
+  return FIXED_SESSION_ID;
 }
 
 const STATE_LABEL = {
@@ -82,6 +82,12 @@ export default function Archi() {
     } catch (e) {}
   };
 
+  // Memory is extracted asynchronously on the backend (a follow-up LLM call that
+  // can take several seconds), so poll a few times to surface it live.
+  const pollMemory = () => {
+    [2500, 6000, 11000, 17000, 24000].forEach((d) => setTimeout(refreshMemory, d));
+  };
+
   const send = async (text) => {
     const msg = (text ?? input).trim();
     if (!msg || thinking) return;
@@ -111,7 +117,7 @@ export default function Archi() {
         setMessages((prev) => prev.map((m) => (m._sid === asstIdx ? { ...m, content: full } : m)));
         if (full && !mutedRef.current) speak(full);
         scrollDown();
-        setTimeout(refreshMemory, 4000);
+        pollMemory();
       },
       (err) => {
         setThinking(false);
