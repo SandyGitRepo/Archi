@@ -1,0 +1,131 @@
+{
+  "project_context": {
+    "name": "Archi",
+    "type": "hybrid_fullstack",
+    "theme": "Sci-Fi HUD, Iron-Man Jarvis interface, Dark, Cinematic, Futuristic",
+    "archetype": "ELECTRIC & NEON",
+    "core_loop": "User interacts via voice/text with a central immersive visualizer representing the AI's state (idle, listening, thinking, speaking) while surrounding HUD panels display memory and chat.",
+    "persona_notes": "Archi has a female voice via Web Speech API and specifically addresses the user as 'daddy'."
+  },
+  "typography": {
+    "fonts": {
+      "heading": "'Unbounded', 'Rajdhani', sans-serif",
+      "body": "'JetBrains Mono', 'Source Code Pro', monospace"
+    },
+    "rules": {
+      "headings": "Tight letter spacing (tracking-tight). Uppercase and wide spacing for overlines/labels (tracking-[0.2em]).",
+      "body": "Loose leading (leading-relaxed) for chat transcript readability. Tech-heavy monospace feel.",
+      "hierarchy": "H1: text-5xl to text-6xl clamp. H2: text-3xl. Body: text-sm to text-base. Labels: text-xs tracking-widest."
+    }
+  },
+  "colors": {
+    "archetype": "Electric & Neon",
+    "palette": {
+      "background_base": "#030508",
+      "background_surface": "rgba(3, 5, 8, 0.6)",
+      "primary_accent": "#00F0FF",
+      "secondary_accent": "#FF0055",
+      "memory_accent": "#B026FF",
+      "text_primary": "#E2F1F8",
+      "text_secondary": "#8AA4B7",
+      "border_glow": "rgba(0, 240, 255, 0.3)"
+    },
+    "rules": {
+      "backgrounds": "Never use pure black #000000. Always use the tinted Void Black (#030508).",
+      "gradients": "Avoid generic SaaS gradients. Use flat dark surfaces with heavy inner/outer drop shadows to create a neon 'glow' effect.",
+      "contrast": "Text over HUD must pass minimum 4.5:1 ratio. Use text-shadow to isolate neon text from background visuals."
+    }
+  },
+  "surfaces_and_micro_themes": {
+    "hud_panels": {
+      "style": "Retro-Futurism Terminal Look mixed with Crystal Glass",
+      "css_classes": "backdrop-blur-xl bg-[#030508]/60 border border-[#00F0FF]/30 shadow-[0_0_15px_rgba(0,240,255,0.1)] rounded-none",
+      "rules": "No pure transparent backgrounds if content scrolls underneath. Must have glass blur to maintain legibility."
+    },
+    "buttons": {
+      "style": "The Tracing Beam / High-Tech Tactile",
+      "css_classes": "bg-transparent border border-[#00F0FF]/50 text-[#00F0FF] hover:bg-[#00F0FF]/10 hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-colors duration-300",
+      "active_state": "For Push-to-Talk: pulsing scale animation, bright solid background."
+    }
+  },
+  "layouts": {
+    "main_container": "h-screen w-full relative overflow-hidden bg-[#030508] flex items-center justify-center",
+    "visualizer_layer": "absolute inset-0 z-0 flex items-center justify-center pointer-events-none",
+    "hud_layer": "absolute inset-0 z-10 p-4 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-6 pointer-events-none",
+    "hud_children": {
+      "chat_panel": "pointer-events-auto col-span-1 md:col-span-3 flex flex-col h-full max-h-full overflow-hidden",
+      "memory_panel": "pointer-events-auto col-span-1 md:col-span-3 md:col-start-10 flex flex-col h-full max-h-full overflow-hidden",
+      "control_bar": "pointer-events-auto col-span-full absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 items-center bg-[#030508]/80 backdrop-blur-md px-6 py-3 border border-[#00F0FF]/40 shadow-[0_0_20px_rgba(0,240,255,0.2)]"
+    },
+    "rules": {
+      "spacing": "Generous spacing. Use p-6 inside HUD panels. Use optical alignment.",
+      "alignment": "Strict grid logic for panels. Visualizer is perfectly centered to create absolute symmetry."
+    }
+  },
+  "motion_and_interactions": {
+    "visualizer_states": {
+      "idle": "Gentle pulse, slow rotation, low opacity ambient glow.",
+      "listening": "Expansion/contraction on audio input, dynamic scaling, intense glowing rings.",
+      "thinking": "Fast processing rotation, erratic particle movement, shifting accent colors.",
+      "speaking": "Synchronized scaling and color bursts matching TTS audio levels."
+    },
+    "ui_transitions": {
+      "panels": "Slide in from screen edges with slight blur reveal (using framer-motion).",
+      "hover": "Targeted text color shift + box-shadow glow increase."
+    },
+    "rules": "Respect prefers-reduced-motion. Exclude transforms from universal transitions. Use custom snappy curves."
+  },
+  "components": [
+    {
+      "name": "VisualizerEngine",
+      "path": "/app/frontend/src/components/ui/VisualizerEngine.jsx",
+      "instructions": "Use React Three Fiber (@react-three/fiber). Accept a 'state' prop ('idle', 'listening', 'thinking', 'speaking') and 'mode' prop ('orb', 'circuit'). 'orb': glowing sphere with custom shader material/particles. 'circuit': flat plane with glowing tech grid nodes and central text 'ARCHI'."
+    },
+    {
+      "name": "HudPanel",
+      "path": "/app/frontend/src/components/ui/HudPanel.jsx",
+      "instructions": "Wrapper for sidebar items (Chat, Memory). Must include scanning line overlay and glowing border. Needs scrollable interior area without default scrollbars (hide gutter)."
+    },
+    {
+      "name": "AudioController",
+      "path": "/app/frontend/src/components/ui/AudioController.jsx",
+      "instructions": "Push to talk button and mute/settings toggles. Needs glowing radiating rings when 'listening'. Integrate Lucide icons (e.g., Mic, Settings, Volume)."
+    }
+  ],
+  "accessibility": {
+    "testing": "All interactive elements MUST have data-testid attributes (e.g., data-testid='push-to-talk-button', data-testid='face-style-toggle', data-testid='chat-input').",
+    "contrast": "Neon text must be highly legible against backgrounds. Use shadows if necessary."
+  },
+  "media_and_assets": {
+    "libraries": [
+      "framer-motion",
+      "lucide-react",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "three"
+    ],
+    "image_urls": {
+      "hud_background": {
+        "url": "https://images.pexels.com/photos/18337643/pexels-photo-18337643.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "Main Layout / Background",
+        "description": "Dynamic abstract neon grid. Use with very low opacity (5-10%) and blend-mode as the deepest background layer."
+      },
+      "scanline_texture": {
+        "url": "https://images.unsplash.com/photo-1779144640626-ed43bd65ebfb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwzfHxkYXJrJTIwZnV0dXJpc3RpYyUyMHRlY2hub2xvZ3klMjB0ZXh0dXJlfGVufDB8fHx8MTc4NzU5NjcwMXww&ixlib=rb-4.1.0&q=85",
+        "category": "HUD Panels / Overlays",
+        "description": "Abstract pattern of glowing lines. Use as a masked texture over HUD panels with mix-blend-mode: overlay."
+      }
+    }
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Do not converge toward generic on-distribution outputs. The UI must feel like a premium sci-fi movie HUD (Jarvis/Iron Man).",
+    "Dark colors must be used independently without generic linear gradients.",
+    "Do not apply universal 'transition: all' in CSS. Target specific properties.",
+    "Do not center align the app container text by default; use optical alignment.",
+    "Use glass-morphism effects with backdrop-blur-xl and subtle saturated borders for HUD panels.",
+    "All interactive elements MUST have data-testid attributes.",
+    "Never use AI assistant emoji characters like 🤖 or 🧠 for icons. Use clean SVG icons.",
+    "Incorporate 3D via @react-three/fiber for the central face, as a 2D DOM element will not capture the 'living circuit board / orb' requirement effectively.",
+    "Ensure all settings controls (voice toggle, face style switch, mute) are clearly accessible in the main UI."
+  ]
+}

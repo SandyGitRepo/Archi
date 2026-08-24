@@ -1,0 +1,45 @@
+{
+  "summary": "Full-stack testing of Archi (Jarvis-style voice assistant). Backend: created pytest suite (15 tests) covering /api/ health, /api/init (greeting insert + idempotency), /api/chat SSE streaming (token-by-token deltas, [DONE] sentinel, persona, message persistence, memory-in-context, async memory auto-extraction), /api/memory CRUD + session isolation + invalid-id handling, /api/messages GET/DELETE + memory-survives-reset. 15/15 passed. Frontend: Playwright E2E on the external URL verified boot greeting, status readout (STANDBY->THINKING), typed chat with visible token streaming, 'daddy' persona in reply, auto-extracted memories appearing in the Memory Vault (\"User's name is Mark.\", \"Mark loves chess.\"), manual memory add/delete, reload persistence, Enter-key send, face-style toggle (orb <-> circuit), mute toggle, reset conversation (clears chat, re-greets, memory retained), and no-op handling for blank chat/memory input. Zero console/page errors. Voice STT/TTS not asserted (headless). Only issues found are mobile-layout overlaps and two backend input-validation gaps.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/chat", "issue": "message has no min_length validation. An empty/whitespace message is persisted to Mongo first, then the LLM call fails ('Anthropic requires at least one non-system message'); the endpoint returns 200 with an SSE error payload and leaves an empty user message in the transcript. Add min_length=1 / strip validation and reject with 422 before inserting."},
+      {"endpoint": "POST /api/memory", "issue": "content has no min_length validation - posting content:'' creates a blank memory fact (200). Frontend guards it, but the API should 422."},
+      {"endpoint": "DELETE /api/memory/{session_id}/{memory_id}", "issue": "Returns 200 {ok:true} for a valid-format but non-existent id (no 404). Cosmetic/idempotent, low priority."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AudioController (floating control bar) on mobile", "issue": "At 390px the fixed control bar overlaps the bottom of the MEMORY VAULT panel: elementFromPoint over the center of 'teach Archi something' returns control-bar (covered=true), and once the add-memory row is open the memory-input/save-memory (+) button is visually occluded by the bar. Needs bottom padding on the memory panel or a lower z-order/offset for the bar.", "selector": "[data-testid=\"control-bar\"] vs [data-testid=\"add-memory-toggle\"] / [data-testid=\"save-memory\"]", "priority": "MEDIUM"},
+      {"component": "AudioController on mobile", "issue": "'Tap to talk' label wraps onto 3 lines and the control bar is horizontally cramped at 390px (bar width 297px with wrapped buttons).", "selector": "[data-testid=\"push-to-talk-button\"]", "priority": "LOW"},
+      {"component": "Topbar on mobile", "issue": "Brand sub-line 'personal intelligence · for daddy' wraps to 2 lines and sits visually flush against the 'CLAUDE SONNET 4.6' tag (no rect overlap, but reads as collided/cramped).", "selector": ".archi-brand-sub / .archi-topbar-tag", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Conversation panel (desktop 1920)", "issues": ["Assistant 'ARCHI' role label and message bubble border use a dim magenta/red on near-black background - low contrast against the panel's cyan accent and hard to read; user 'DADDY' label (cyan) is much more legible. Consider raising the assistant label luminance.", "Chat and memory columns are pinned at ~275px on a 1920 viewport, leaving a very wide empty middle; long assistant replies read in a narrow 4-word-per-line column. Intentional HUD styling, but widening the columns would improve readability."]},
+      {"screen": "Mobile 390px", "issues": ["Conversation transcript collapses to ~205px tall, showing roughly 2 messages before scrolling."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Add Pydantic validation: ChatRequest.message and MemoryCreate.content min_length=1 (and strip) so blank input 422s instead of persisting an empty message / creating a blank memory fact.",
+    "Fix mobile layout: reserve space below the MEMORY VAULT panel (or reposition the fixed control bar) so add-memory-toggle / memory-input / save-memory are not overlapped at 390px.",
+    "Improve contrast of the assistant message label/border (currently dim magenta on black) in the conversation panel.",
+    "Optional: prevent 'Tap to talk' label wrap and tighten topbar spacing on small screens."
+  ],
+  "critical_code_review_comments": [
+    "server.py /api/chat inserts the user message into Mongo before the LLM call; if streaming fails the orphan user turn stays in the transcript and is fed back as context. Insert after a successful first token, or delete on failure.",
+    "extract_memory is launched with asyncio.create_task inside the SSE generator with no reference held - the task can be garbage-collected or dropped if the client disconnects mid-stream. Keep a strong reference (or use BackgroundTasks) to make extraction reliable.",
+    "Messages/memory are queried with .to_list(2000)/.to_list(500) and sorted by an ISO string timestamp with no index; add an index on {session_id, timestamp} and paginate before the transcript grows.",
+    "No length cap on message/memory content - unbounded strings go straight to the LLM prompt and Mongo.",
+    "Frontend api.js streamChat has no request timeout/abort; a hung stream leaves the UI stuck with send-button disabled and no way to cancel. Consider AbortController + a stop button."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (15/15 pytest)", "frontend": "100% of testable flows passed (voice STT/TTS not assertable headless); 3 mobile/contrast UI defects noted"},
+  "seed_data_creation": "Ephemeral TEST_<uuid> sessions created by pytest and cleaned up in the module teardown (messages + memory deleted). One browser session (localStorage archi_session_id) retains 2 auto-extracted facts about 'Mark'/chess from the E2E run.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "None required (no auth). /app/memory/test_credentials.md is an empty template - fine for this app.",
+  "context_for_next_testing_agent": "Backend suite lives at /app/backend/tests/backend_test.py and is safe to re-run (uses external REACT_APP_BACKEND_URL, self-cleaning TEST_ sessions, ~30s under the preconfigured -n 2 xdist config). Memory auto-extraction takes 3-10s after the assistant reply; the UI refreshes memory 4s after stream completion, so poll for up to ~25s. Web Speech API (mic/TTS) cannot be exercised in headless Chromium - push-to-talk renders enabled but is a no-op; do not fail on it. Remaining open items: mobile control-bar overlap of the memory panel footer, assistant-label contrast, and empty-input validation on /api/chat and /api/memory.",
+  "rca_of_the_issue": "Empty-message 500-class failure: /api/chat accepts message:'' (no min_length), persists it, then LlmChat sends a request with no user content -> litellm BadRequestError 'Anthropic requires at least one non-system message', surfaced as an SSE {error} frame with HTTP 200. Mobile overlap: the control bar is position-fixed at the bottom while the memory column has no matching bottom padding, so at 390px the bar's rect (y 703-818) intersects the memory panel footer (y ~695-734), covering the add/save memory controls per elementFromPoint."
+}
