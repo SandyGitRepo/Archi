@@ -17,13 +17,13 @@ Adapt github.com/jaredrhod/fullstack-agent (a local Claude Code stack giving an 
 
 ## Core Requirements (static)
 - Jarvis-style immersive HUD, dark neon aesthetic.
-- Archi persona: warm, witty female assistant that always addresses user as "daddy".
+- Archi persona: warm, witty female assistant that always addresses user as "Bro".
 - Reactive central "face" with idle/listening/thinking/speaking states, orb + circuit modes.
 - Persistent, auto-learned memory vault + manual memory add/delete.
 
 ## Implemented (2026-08-24)
-- Session init with spoken greeting: "Hello daddy. Archi is online..."
-- Token-by-token streaming Claude chat with personality (calls user "daddy").
+- Session init with spoken greeting: "Hello Bro. Archi is online..."
+- Token-by-token streaming Claude chat with personality (calls user "Bro").
 - Auto memory extraction to MongoDB after each turn; Memory Vault panel with manual add/delete.
 - Dual switchable visualizer (glowing orb + circuit-board chip labeled ARCHI) with state-reactive colors + mic-level meter.
 - Browser female TTS speaks replies; push-to-talk STT; mute toggle; reset conversation.
